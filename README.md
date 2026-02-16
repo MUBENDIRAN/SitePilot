@@ -7,31 +7,6 @@ A simple FastAPI application to list CVEs (Common Vulnerabilities and Exposures)
 *   **CVE Data Ingestion:** Fetches and stores CVE data from the NVD API.
 *   **API Endpoint:** Provides a RESTful API endpoint to list CVEs with various query parameters for filtering, sorting, and pagination.
 
-## Setup
-
-### Prerequisites
-
-*   Python 3.8+
-
-### Installation
-
-1.  Clone the repository:
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
-    (Note: Replace `<repository-url>` and `<repository-directory>` with actual values if known, otherwise assume current directory)
-
-2.  Create and activate a virtual environment (recommended):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-
-3.  Install the dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
 
 ## Usage
 
