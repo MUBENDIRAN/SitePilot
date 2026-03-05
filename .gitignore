@@ -1,3 +1,4 @@
 fastapivenv/
 __pycache__
 *.db
+.env

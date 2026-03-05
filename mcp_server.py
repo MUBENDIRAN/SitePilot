@@ -2,42 +2,51 @@ from mcp.server.fastmcp import FastMCP
 import subprocess
 import requests
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
 
 mcp = FastMCP("website-tools")
-
 
 BASE_DIR = Path(__file__).parent
 SITE_DIR = BASE_DIR / "site"
 
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+
 @mcp.tool()
 def update_static_site(file: str, content: str):
-    """Update a static website file"""
+    """Update a static website file and push changes to GitHub"""
 
     path = SITE_DIR / file
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-    subprocess.run(["git", "add", str(path)])
-    subprocess.run(["git", "commit", "-m", "AI update"])
-    subprocess.run(["git", "push"])
+    # Git operations
+    subprocess.run(["git", "add", str(path)], check=False)
+    subprocess.run(["git", "commit", "-m", "AI update"], check=False)
+    subprocess.run(["git", "push"], check=False)
 
     return f"Website updated: {file}"
 
 
 @mcp.tool()
 def notify_friend(message: str):
-    """Send notification to friend"""
+    """Send notification to friend via Telegram"""
 
-    TOKEN="8797947540:AAEGYahY22bvXxKinMWudbHXuke_wp3qCPI"
-    CHAT_ID="1902713619"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-    url=f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-
-    requests.post(url,json={
-        "chat_id":CHAT_ID,
-        "text":message
-    })
+    requests.post(
+        url,
+        json={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+        },
+    )
 
     return "Message sent"
 
