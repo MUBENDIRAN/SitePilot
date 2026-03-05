@@ -1,0 +1,3 @@
+fastapivenv/
+__pycache__
+*.db

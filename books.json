@@ -1,0 +1,8 @@
+[
+  {"title": "title one", "year": 2000, "author": "author one"},
+  {"title": "title oneofone", "year": 2000, "author": "author one"},
+  {"title": "title two", "year": 2001, "author": "author two"},
+  {"title": "title third", "year": 2002, "author": "author third"},
+  {"title": "title four", "year": 2004, "author": "author four"},
+  {"title": "title five", "year": 2005, "author": "author five"}
+]
