@@ -53,131 +53,148 @@ def notify(message):
             pass
 
 
-# ---------------- PROJECT STRUCTURE ----------------
+# ---------------- FILESYSTEM ----------------
 
-def get_project_structure():
+def read_file(filename):
 
-    structure = []
+    path = SITE_DIR / filename
 
-    for root, dirs, files in os.walk(SITE_DIR):
-        for f in files:
-            structure.append(
+    if not path.exists():
+        return "FILE NOT FOUND"
+
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def write_file(name, content):
+
+    path = SITE_DIR / name
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def delete_file(name):
+
+    path = SITE_DIR / name
+
+    if path.exists():
+        os.remove(path)
+
+
+def list_files():
+
+    files = []
+
+    for root, dirs, filenames in os.walk(SITE_DIR):
+        for f in filenames:
+            files.append(
                 os.path.relpath(os.path.join(root, f), SITE_DIR)
             )
 
-    return "\n".join(structure)
+    return files
 
 
-# ---------------- AI GENERATION ----------------
+# ---------------- AI AGENT ----------------
 
-def generate_actions(prompt):
+SYSTEM_PROMPT = """
+You are an AI developer maintaining a website.
 
-    structure = get_project_structure()
+You can perform actions:
 
-    response = ollama.chat(
-        model="qwen2.5-coder:7b",
-        messages=[
-            {
-                "role": "system",
-                "content": f"""
-You are an AI web developer maintaining a Dynamic website.
-
-Current project files:
-
-{structure}
-
-You can perform operations:
-
-CREATE / UPDATE file:
-
+READ: filename
 FILE: filename
-code
-
-DELETE file:
+<content>
 
 DELETE: filename
 
 Rules:
-- Only output FILE or DELETE instructions
-- No explanations
-- No markdown
-- Follow exact format
+- Think step by step.
+- If you need to see a file before editing it, use READ.
+- When ready to modify or create files use FILE.
+- When removing files use DELETE.
+- Never use markdown.
+- Never explain.
+- Only output commands.
 
 Example:
 
-DELETE: oldpage.html
+READ: index.html
 
 FILE: index.html
-<html>...</html>
+<html>Hello</html>
 
-FILE: styles.css
-body {{ background:black; }}
+DELETE: old.html
 """
-            },
-            {"role": "user", "content": prompt}
-        ]
+
+
+def ask_ai(messages):
+
+    response = ollama.chat(
+        model="qwen2.5-coder:7b",
+        messages=messages
     )
 
     return response["message"]["content"]
 
 
-# ---------------- PARSER ----------------
+# ---------------- AGENT LOOP ----------------
 
-def parse_actions(ai_output) -> tuple[dict[Unknown, Unknown], list[Unknown]]:
+def run_agent(prompt):
 
-    files = {}
-    deletes = []
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": prompt}
+    ]
 
-    current = None
-    buffer = []
+    for _ in range(10):  # max reasoning steps
 
-    for line in ai_output.splitlines():
+        ai_output = ask_ai(messages)
 
-        if line.startswith("DELETE:"):
+        print("\nAI:", ai_output)
 
-            deletes.append(
-                line.replace("DELETE:", "").strip()
-            )
+        messages.append({"role": "assistant", "content": ai_output})
 
-        elif line.startswith("FILE:"):
+        lines = ai_output.splitlines()
 
-            if current:
-                files[current] = "\n".join(buffer)
+        # READ operation
+        if lines[0].startswith("READ:"):
 
-            current = line.replace("FILE:", "").strip()
-            buffer = []
+            filename = lines[0].replace("READ:", "").strip()
 
-        else:
-            buffer.append(line)
+            content = read_file(filename)
 
-    if current:
-        files[current] = "\n".join(buffer)
+            messages.append({
+                "role": "user",
+                "content": f"CONTENT OF {filename}:\n{content}"
+            })
 
-    return files, deletes
+            continue
 
+        # DELETE operation
+        if lines[0].startswith("DELETE:"):
 
-# ---------------- FILE OPERATIONS ----------------
+            filename = lines[0].replace("DELETE:", "").strip()
 
-def write_files(files):
+            delete_file(filename)
 
-    for name, content in files.items():
+            continue
 
-        path = SITE_DIR / name
+        # FILE write
+        if lines[0].startswith("FILE:"):
 
-        path.parent.mkdir(parents=True, exist_ok=True)
+            filename = lines[0].replace("FILE:", "").strip()
 
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
+            content = "\n".join(lines[1:])
 
+            write_file(filename, content)
 
-def delete_files(deletes):
+            continue
 
-    for name in deletes:
-
-        path = SITE_DIR / name
-
-        if path.exists():
-            os.remove(path)
+        # stop if no commands
+        break
 
 
 # ---------------- MAIN ----------------
@@ -188,19 +205,15 @@ def main():
         print("Prompt required")
         return
 
-    prompt: str = sys.argv[1]
+    prompt = sys.argv[1]
 
-    ai_output: str = generate_actions(prompt)
+    print("\nUSER:", prompt)
 
-    files, deletes = parse_actions(ai_output)
-
-    delete_files(deletes)
-
-    write_files(files)
+    run_agent(prompt)
 
     deploy()
 
-    notify("🚀 SitePilot deployed updated Website")
+    notify("🚀 SitePilot deployed updated website")
 
 
 if __name__ == "__main__":
