@@ -1,27 +1,16 @@
+```css
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
-    margin: 0;
-    padding: 0;
+    background: white;
+    color: black;
 }
 
-.container {
-    text-align: center;
-    padding: 50px;
+.light-theme body {
+    background: white;
+    color: black;
 }
 
-#icon-list {
-    list-style-type: none;
-    padding: 0;
-}
-
-#icon-list li {
-    display: inline-block;
-    margin: 0 20px;
-    cursor: pointer;
-}
-
-#icon-list i {
-    font-size: 24px;
+.dark-theme body {
+    background: black;
+    color: white;
 }
 ```
