@@ -1,41 +1,27 @@
 body {
     font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f9;
 }
 
-header {
-    background-color: #333;
-    color: #fff;
+.container {
     text-align: center;
-    padding: 1em 0;
+    padding: 50px;
 }
 
-nav ul {
+#icon-list {
     list-style-type: none;
-    display: flex;
-    justify-content: center;
-    background-color: #555;
+    padding: 0;
 }
 
-nav ul li {
-    margin: 0 1em;
+#icon-list li {
+    display: inline-block;
+    margin: 0 20px;
+    cursor: pointer;
 }
 
-nav ul li a {
-    color: #fff;
-    text-decoration: none;
+#icon-list i {
+    font-size: 24px;
 }
-
-section {
-    padding: 2em;
-    text-align: center;
-}
-
-.project {
-    border: 1px solid #ddd;
-    padding: 1em;
-    margin-bottom: 1em;
-    background-color: #fff;
-}
+```
