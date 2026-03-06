@@ -1,5 +1,7 @@
-import os
 import sys
+sys.stdout.reconfigure(encoding="utf-8")
+
+import os
 import subprocess
 import requests
 import ollama
