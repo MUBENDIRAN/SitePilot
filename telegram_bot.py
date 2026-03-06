@@ -10,27 +10,25 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Bot ready.\nUse /update <your request>"
+        "SitePilot ready.\nUse /update <describe website change>"
     )
 
 async def update_site(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
-        await update.message.reply_text(
-            "Usage: /update <describe the page>"
-        )
+        await update.message.reply_text("Usage: /update <prompt>")
         return
 
     prompt = " ".join(context.args)
 
-    await update.message.reply_text("Generating website...")
+    await update.message.reply_text("Generating website update...")
 
     subprocess.run(
-        ["python", "mcp_client.py", prompt],
+        ["python", "mcp_server.py", prompt],
         check=True
     )
 
-    await update.message.reply_text("Website updated successfully.")
+    await update.message.reply_text("Website updated and deployed.")
 
 if __name__ == "__main__":
 

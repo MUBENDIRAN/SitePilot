@@ -1,19 +1,15 @@
-from mcp.server.fastmcp import FastMCP
-import subprocess
-import ollama
-import requests
 import os
 import sys
+import subprocess
+import requests
+import ollama
 from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
-mcp = FastMCP("website-tools")
-
 BASE_DIR = Path(__file__).parent
 SITE_DIR = BASE_DIR / "site"
-REPO_DIR = BASE_DIR
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("TELEGRAM_NOTIFY_IDS", "").split(",")
@@ -22,22 +18,16 @@ CHAT_IDS = os.getenv("TELEGRAM_NOTIFY_IDS", "").split(",")
 def run_git(cmd):
     subprocess.run(
         cmd,
-        cwd=REPO_DIR,
+        cwd=BASE_DIR,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        check=True
+        check=False
     )
 
 
-def deploy(path):
-
-    run_git(["git", "add", str(path)])
-
-    try:
-        run_git(["git", "commit", "-m", "AI website update"])
-    except:
-        pass
-
+def deploy():
+    run_git(["git", "add", "."])
+    run_git(["git", "commit", "-m", "AI website update"])
     run_git(["git", "push"])
 
 
@@ -52,69 +42,122 @@ def notify(message):
         try:
             requests.post(
                 url,
-                json={
-                    "chat_id": chat,
-                    "text": message
-                },
+                json={"chat_id": chat, "text": message},
                 timeout=5
             )
         except:
             pass
 
 
-def generate_page(prompt):
+def get_project_structure():
+
+    structure = []
+
+    for root, dirs, files in os.walk(SITE_DIR):
+        for f in files:
+            structure.append(os.path.relpath(os.path.join(root, f), SITE_DIR))
+
+    return "\n".join(structure)
+
+
+def generate_files(prompt):
+
+    structure = get_project_structure()
 
     response = ollama.chat(
         model="llama3.1:8b",
         messages=[
             {
                 "role": "system",
-                "content": """
-You generate static webpages.
+                "content": f"""
+You maintain a static website.
 
-Follow the user's instructions exactly.
+Current project files:
 
-If they request:
-- HTML only → produce pure HTML
-- CSS styling → include <style>
-- JavaScript → include <script>
+{structure}
 
-Return ONLY valid webpage code.
+You may:
+- modify existing files
+- create new pages
+- update CSS
+- add JavaScript
+
+Return updates in this format:
+
+FILE: filename
+code
+
+Example:
+
+FILE: index.html
+<html>...</html>
+
+FILE: styles.css
+body {{...}}
 """
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "user", "content": prompt}
         ]
     )
 
     return response["message"]["content"]
 
 
-@mcp.tool()
-def update_homepage(prompt: str):
+def parse_files(ai_output):
 
-    html = generate_page(prompt)
+    files = {}
 
-    path = SITE_DIR / "index.html"
+    current = None
+    buffer = []
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(html)
+    for line in ai_output.splitlines():
 
-    deploy(path)
+        if line.startswith("FILE:"):
+            if current:
+                files[current] = "\n".join(buffer)
 
-    notify("🚀 Website updated successfully")
+            current = line.replace("FILE:", "").strip()
+            buffer = []
 
-    return "Website updated"
+        else:
+            buffer.append(line)
+
+    if current:
+        files[current] = "\n".join(buffer)
+
+    return files
+
+
+def write_files(files):
+
+    for name, content in files.items():
+
+        path = SITE_DIR / name
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+
+def main():
+
+    if len(sys.argv) < 2:
+        print("Prompt required")
+        return
+
+    prompt = sys.argv[1]
+
+    ai_output = generate_files(prompt)
+
+    files = parse_files(ai_output)
+
+    write_files(files)
+
+    deploy()
+
+    notify("🚀 SitePilot deployed website update")
 
 
 if __name__ == "__main__":
-
-    prompt = sys.argv[1] if len(sys.argv) > 1 else None
-
-    if prompt:
-        update_homepage(prompt)
-    else:
-        print("MCP server running", file=sys.stderr)
-        mcp.run()
+    main()
