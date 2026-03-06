@@ -15,6 +15,8 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_IDS = os.getenv("TELEGRAM_NOTIFY_IDS", "").split(",")
 
 
+# ---------------- GIT ----------------
+
 def run_git(cmd):
     subprocess.run(
         cmd,
@@ -30,6 +32,8 @@ def deploy():
     run_git(["git", "commit", "-m", "AI website update"])
     run_git(["git", "push"])
 
+
+# ---------------- TELEGRAM ----------------
 
 def notify(message):
 
@@ -49,18 +53,24 @@ def notify(message):
             pass
 
 
+# ---------------- PROJECT STRUCTURE ----------------
+
 def get_project_structure():
 
     structure = []
 
     for root, dirs, files in os.walk(SITE_DIR):
         for f in files:
-            structure.append(os.path.relpath(os.path.join(root, f), SITE_DIR))
+            structure.append(
+                os.path.relpath(os.path.join(root, f), SITE_DIR)
+            )
 
     return "\n".join(structure)
 
 
-def generate_files(prompt):
+# ---------------- AI GENERATION ----------------
+
+def generate_actions(prompt):
 
     structure = get_project_structure()
 
@@ -70,30 +80,38 @@ def generate_files(prompt):
             {
                 "role": "system",
                 "content": f"""
-You maintain a static website.
+You are an AI web developer maintaining a static website.
 
 Current project files:
 
 {structure}
 
-You may:
-- modify existing files
-- create new pages
-- update CSS
-- add JavaScript
+You can perform operations:
 
-Return updates in this format:
+CREATE / UPDATE file:
 
 FILE: filename
 code
 
+DELETE file:
+
+DELETE: filename
+
+Rules:
+- Only output FILE or DELETE instructions
+- No explanations
+- No markdown
+- Follow exact format
+
 Example:
+
+DELETE: oldpage.html
 
 FILE: index.html
 <html>...</html>
 
 FILE: styles.css
-body {{...}}
+body {{ background:black; }}
 """
             },
             {"role": "user", "content": prompt}
@@ -103,16 +121,26 @@ body {{...}}
     return response["message"]["content"]
 
 
-def parse_files(ai_output):
+# ---------------- PARSER ----------------
+
+def parse_actions(ai_output):
 
     files = {}
+    deletes = []
 
     current = None
     buffer = []
 
     for line in ai_output.splitlines():
 
-        if line.startswith("FILE:"):
+        if line.startswith("DELETE:"):
+
+            deletes.append(
+                line.replace("DELETE:", "").strip()
+            )
+
+        elif line.startswith("FILE:"):
+
             if current:
                 files[current] = "\n".join(buffer)
 
@@ -125,8 +153,10 @@ def parse_files(ai_output):
     if current:
         files[current] = "\n".join(buffer)
 
-    return files
+    return files, deletes
 
+
+# ---------------- FILE OPERATIONS ----------------
 
 def write_files(files):
 
@@ -140,6 +170,18 @@ def write_files(files):
             f.write(content)
 
 
+def delete_files(deletes):
+
+    for name in deletes:
+
+        path = SITE_DIR / name
+
+        if path.exists():
+            os.remove(path)
+
+
+# ---------------- MAIN ----------------
+
 def main():
 
     if len(sys.argv) < 2:
@@ -148,9 +190,15 @@ def main():
 
     prompt = sys.argv[1]
 
-    ai_output = generate_files(prompt)
+    ai_output = generate_actions(prompt)
 
-    files = parse_files(ai_output)
+    print("\n--- AI RESPONSE ---\n")
+    print(ai_output)
+    print("\n-------------------\n")
+
+    files, deletes = parse_actions(ai_output)
+
+    delete_files(deletes)
 
     write_files(files)
 
