@@ -123,7 +123,7 @@ body {{ background:black; }}
 
 # ---------------- PARSER ----------------
 
-def parse_actions(ai_output):
+def parse_actions(ai_output) -> tuple[dict[Unknown, Unknown], list[Unknown]]:
 
     files = {}
     deletes = []
@@ -188,13 +188,9 @@ def main():
         print("Prompt required")
         return
 
-    prompt = sys.argv[1]
+    prompt: str = sys.argv[1]
 
-    ai_output = generate_actions(prompt)
-
-    print("\n--- AI RESPONSE ---\n")
-    print(ai_output)
-    print("\n-------------------\n")
+    ai_output: str = generate_actions(prompt)
 
     files, deletes = parse_actions(ai_output)
 
@@ -204,7 +200,7 @@ def main():
 
     deploy()
 
-    notify("🚀 SitePilot deployed website update")
+    notify("🚀 SitePilot deployed updated Website")
 
 
 if __name__ == "__main__":
