@@ -1,14 +1,12 @@
 body {
-  background-color: #f0f0f0;
-  color: #333;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
 }
 
-.light-mode body {
-  background-color: #fff;
-  color: #333;
-}
-
-.dark-mode body {
-  background-color: #333;
-  color: #f0f0f0;
+h1 {
+    text-align: center;
+    color: #333;
+    padding-top: 50px;
 }

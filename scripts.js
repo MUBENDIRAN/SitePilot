@@ -1,4 +1,1 @@
-const toggleButton = document.getElementById('toggle');
-toggleButton.addEventListener('click', function() {
-  document.body.classList.toggle('dark-mode');
-});
+// Add any JavaScript code here for interactivity
