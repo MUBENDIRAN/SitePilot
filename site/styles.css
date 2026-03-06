@@ -1,12 +1,6 @@
 ```css
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f2f2f2;
-}
-
-h1 {
-    color: #00698f;
-    text-align: center;
+  font-family: Arial, sans-serif;
 }
 ```
-This will create a basic HTML page with a welcome message and some CSS styling to make it look decent.
+I added a basic HTML structure and some simple styling to the body of the page.
