@@ -1,11 +1,11 @@
 from mcp.server.fastmcp import FastMCP
 import subprocess
+import ollama
 import requests
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
-import ollama
 
 load_dotenv()
 
@@ -15,123 +15,106 @@ BASE_DIR = Path(__file__).parent
 SITE_DIR = BASE_DIR / "site"
 REPO_DIR = BASE_DIR
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_IDS = os.getenv("TELEGRAM_CHAT_IDS", "")
-
-
-def log(msg):
-    """Log only to stderr (never stdout in MCP servers)."""
-    print(msg, file=sys.stderr)
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_IDS = os.getenv("TELEGRAM_NOTIFY_IDS", "").split(",")
 
 
 def run_git(cmd):
-    """Run git command safely."""
+    subprocess.run(
+        cmd,
+        cwd=REPO_DIR,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True
+    )
+
+
+def deploy(path):
+
+    run_git(["git", "add", str(path)])
+
     try:
-        subprocess.run(
-            cmd,
-            cwd=REPO_DIR,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        )
-    except subprocess.CalledProcessError as e:
-        log(f"Git error: {e.stderr}")
-        raise
+        run_git(["git", "commit", "-m", "AI website update"])
+    except:
+        pass
+
+    run_git(["git", "push"])
 
 
-def send_notification(message):
-    """Send Telegram message to multiple recipients."""
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_IDS:
-        log("Telegram configuration missing")
+def notify(message):
+
+    if not TOKEN:
         return
 
-    chat_ids = [c.strip() for c in TELEGRAM_CHAT_IDS.split(",") if c.strip()]
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-    for chat_id in chat_ids:
+    for chat in CHAT_IDS:
         try:
             requests.post(
-                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                url,
                 json={
-                    "chat_id": chat_id,
+                    "chat_id": chat,
                     "text": message
                 },
                 timeout=5
             )
-        except Exception as e:
-            log(f"Telegram send failed for {chat_id}: {e}")
-
-
-def deploy(path):
-    """Commit and push changes."""
-    try:
-        run_git(["git", "add", str(path)])
-
-        try:
-            run_git(["git", "commit", "-m", "AI website update"])
         except:
-            log("Nothing new to commit")
-
-        run_git(["git", "push"])
-
-        send_notification("🚀 Website updated and deployed successfully")
-
-    except Exception as e:
-        log(f"Deployment failed: {e}")
-        raise
+            pass
 
 
-def generate_html(prompt):
-    """Use local LLM to generate HTML."""
-    try:
-        response = ollama.chat(
-            model="llama3.1:8b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Generate a clean simple HTML homepage. Return only valid HTML."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+def generate_page(prompt):
 
-        return response["message"]["content"]
+    response = ollama.chat(
+        model="llama3.1:8b",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You generate static webpages.
 
-    except Exception as e:
-        log(f"Ollama generation failed: {e}")
-        raise
+Follow the user's instructions exactly.
+
+If they request:
+- HTML only → produce pure HTML
+- CSS styling → include <style>
+- JavaScript → include <script>
+
+Return ONLY valid webpage code.
+"""
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
 
 
 @mcp.tool()
-def update_homepage_from_prompt(prompt: str):
-    """
-    Generate HTML from a natural-language prompt,
-    update index.html, push to GitHub, and notify Telegram users.
-    """
+def update_homepage(prompt: str):
 
-    try:
-        html = generate_html(prompt)
+    html = generate_page(prompt)
 
-        path = SITE_DIR / "index.html"
+    path = SITE_DIR / "index.html"
 
-        if not SITE_DIR.exists():
-            return "Site directory not found"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
 
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(html)
+    deploy(path)
 
-        deploy(path)
+    notify("🚀 Website updated successfully")
 
-        return "Homepage updated from prompt and deployed."
-
-    except Exception as e:
-        log(e)
-        return f"Update failed: {str(e)}"
+    return "Website updated"
 
 
 if __name__ == "__main__":
-    log("Starting MCP server")
-    mcp.run()
+
+    prompt = sys.argv[1] if len(sys.argv) > 1 else None
+
+    if prompt:
+        update_homepage(prompt)
+    else:
+        print("MCP server running", file=sys.stderr)
+        mcp.run()
