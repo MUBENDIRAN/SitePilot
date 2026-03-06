@@ -75,7 +75,7 @@ def generate_actions(prompt):
     structure = get_project_structure()
 
     response = ollama.chat(
-        model="llama3.1:8b",
+        model="qwen2.5-coder:7b",
         messages=[
             {
                 "role": "system",
