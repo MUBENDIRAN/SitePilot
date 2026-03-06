@@ -55,10 +55,9 @@ Traditional web development—even for small changes—requires a laptop, a code
     ```bash
     python telegram_bot.py
     ```
-2.  Open Telegram and send `/update Add a dark mode toggle to the homepage`.
+2.  Open Telegram and send Eg:`/update Add a dark mode toggle to the homepage`.
 
 ## 📁 Project Structure
 - `telegram_bot.py`: The entry point for user interaction.
 - `mcp_server.py`: The core engine that talks to Ollama, parses file updates, and handles Git deployment.
-- `mcp_client.py`: A CLI wrapper for local testing.
 - `site/`: Contains the actual website source code (HTML/CSS/JS).
