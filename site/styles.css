@@ -1,16 +1,14 @@
-```css
 body {
-    background: white;
-    color: black;
+  background-color: #f0f0f0;
+  color: #333;
 }
 
-.light-theme body {
-    background: white;
-    color: black;
+.light-mode body {
+  background-color: #fff;
+  color: #333;
 }
 
-.dark-theme body {
-    background: black;
-    color: white;
+.dark-mode body {
+  background-color: #333;
+  color: #f0f0f0;
 }
-```

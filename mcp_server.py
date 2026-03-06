@@ -94,41 +94,35 @@ def list_files():
                 os.path.relpath(os.path.join(root, f), SITE_DIR)
             )
 
-    return files
+    return "\n".join(files)
 
 
-# ---------------- AI AGENT ----------------
+# ---------------- AI SYSTEM PROMPT ----------------
 
 SYSTEM_PROMPT = """
-You are an AI developer maintaining a website.
+You are an AI developer maintaining a static website.
 
-You can perform actions:
+Available commands:
 
 READ: filename
+
 FILE: filename
-<content>
+<full file content>
 
 DELETE: filename
 
 Rules:
-- Think step by step.
-- If you need to see a file before editing it, use READ.
-- When ready to modify or create files use FILE.
-- When removing files use DELETE.
-- Never use markdown.
-- Never explain.
-- Only output commands.
-
-Example:
-
-READ: index.html
-
-FILE: index.html
-<html>Hello</html>
-
-DELETE: old.html
+- Think step by step
+- READ files before editing
+- Use FILE to create or update files
+- Use DELETE to remove files
+- Only output commands
+- Never explain
+- Never use markdown
 """
 
+
+# ---------------- OLLAMA CALL ----------------
 
 def ask_ai(messages):
 
@@ -140,61 +134,115 @@ def ask_ai(messages):
     return response["message"]["content"]
 
 
+# ---------------- PARSER ----------------
+
+def parse_commands(output):
+
+    commands = []
+
+    lines = output.splitlines()
+
+    i = 0
+
+    while i < len(lines):
+
+        line = lines[i].strip()
+
+        if line.startswith("READ:"):
+            commands.append(("READ", line.replace("READ:", "").strip()))
+            i += 1
+            continue
+
+        if line.startswith("DELETE:"):
+            commands.append(("DELETE", line.replace("DELETE:", "").strip()))
+            i += 1
+            continue
+
+        if line.startswith("FILE:"):
+
+            filename = line.replace("FILE:", "").strip()
+
+            content_lines = []
+            i += 1
+
+            while i < len(lines) and not lines[i].startswith(("FILE:", "READ:", "DELETE:")):
+                content_lines.append(lines[i])
+                i += 1
+
+            content = "\n".join(content_lines)
+
+            commands.append(("FILE", filename, content))
+            continue
+
+        i += 1
+
+    return commands
+
+
 # ---------------- AGENT LOOP ----------------
 
 def run_agent(prompt):
 
+    structure = list_files()
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": prompt}
+        {"role": "user", "content": f"Project files:\n{structure}\n\nTask:\n{prompt}"}
     ]
 
-    for _ in range(10):  # max reasoning steps
+    for step in range(8):
 
         ai_output = ask_ai(messages)
 
-        print("\nAI:", ai_output)
+        print("\nAI OUTPUT\n", ai_output)
 
         messages.append({"role": "assistant", "content": ai_output})
 
-        lines = ai_output.splitlines()
+        commands = parse_commands(ai_output)
 
-        # READ operation
-        if lines[0].startswith("READ:"):
+        if not commands:
+            print("No commands returned")
+            break
 
-            filename = lines[0].replace("READ:", "").strip()
+        did_write = False
 
-            content = read_file(filename)
+        for cmd in commands:
 
-            messages.append({
-                "role": "user",
-                "content": f"CONTENT OF {filename}:\n{content}"
-            })
+            if cmd[0] == "READ":
 
-            continue
+                filename = cmd[1]
 
-        # DELETE operation
-        if lines[0].startswith("DELETE:"):
+                content = read_file(filename)
 
-            filename = lines[0].replace("DELETE:", "").strip()
+                messages.append({
+                    "role": "user",
+                    "content": f"CONTENT OF {filename}:\n{content}"
+                })
 
-            delete_file(filename)
+            elif cmd[0] == "DELETE":
 
-            continue
+                filename = cmd[1]
 
-        # FILE write
-        if lines[0].startswith("FILE:"):
+                delete_file(filename)
 
-            filename = lines[0].replace("FILE:", "").strip()
+                print("Deleted", filename)
 
-            content = "\n".join(lines[1:])
+                did_write = True
 
-            write_file(filename, content)
+            elif cmd[0] == "FILE":
 
-            continue
+                filename = cmd[1]
+                content = cmd[2]
 
-        # stop if no commands
-        break
+                write_file(filename, content)
+
+                print("Updated", filename)
+
+                did_write = True
+
+        # stop reasoning if files changed
+        if did_write:
+            break
 
 
 # ---------------- MAIN ----------------
