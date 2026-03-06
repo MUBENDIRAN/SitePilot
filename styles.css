@@ -1,6 +1,7 @@
-```css
+/* Update CSS to apply styles to new page */
 body {
-  font-family: Arial, sans-serif;
+  /* Existing styles here */
 }
-```
-I added a basic HTML structure and some simple styling to the body of the page.
+.mube-page {
+  /* Add specific styles for Mube page here */
+}
