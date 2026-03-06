@@ -80,7 +80,7 @@ def generate_actions(prompt):
             {
                 "role": "system",
                 "content": f"""
-You are an AI web developer maintaining a static website.
+You are an AI web developer maintaining a Dynamic website.
 
 Current project files:
 
