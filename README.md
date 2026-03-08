@@ -51,6 +51,9 @@ Traditional web development—even for small changes—requires a laptop, a code
     TELEGRAM_TOKEN=your_bot_token_here
     TELEGRAM_NOTIFY_IDS=your_chat_id_1,your_chat_id_2
     ```
+## WorkFlow ⛓️‍💥
+
+![alt text](image_f39afd95.png)
 
 ### Running
 1.  Start the Telegram bot:
@@ -65,3 +68,5 @@ Traditional web development—even for small changes—requires a laptop, a code
 - `mcp_server.py`: The core engine that interacts with Ollama, parses file updates, and handles Git deployment.
 - `site/`: Contains the actual website source code (HTML/CSS/JS).
 - `.github/workflows/`: Contains the GitHub Actions for automated deployment to GitHub Pages.
+
+▶️ **Watch the full demo here:** https://youtu.be/wWsGnYfuECk

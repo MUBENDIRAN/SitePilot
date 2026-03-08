@@ -2,3 +2,4 @@ fastapivenv/
 __pycache__
 *.db
 .env
+*.mp4
