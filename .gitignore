@@ -3,3 +3,6 @@ __pycache__
 *.db
 .env
 *.mp4
+.idea/
+.vs/
+blackfire.msi

@@ -1,72 +1,115 @@
-# SitePilot 🚀
+# SitePilot (MCP-Powered Website Operations)
 
-SitePilot is an AI-powered static website generator and deployment engine that allows you to update your website directly from your phone via Telegram. It uses local LLMs to process natural language requests and automatically deploys changes to GitHub Pages.
+SitePilot is a Telegram-controlled, AI-assisted static website maintenance system.
+You send a request from Telegram, and the project uses an MCP-style operation loop to read/edit files in `site/`, then deploy changes through Git.
 
-## 🛠 Tech Stack
+## What this project does
 
-| Technology | Role | Why? |
-| :--- | :--- | :--- |
-| **Python 3.12+** | Core Logic | The industry standard for AI orchestration and automation scripts. |
-| **Ollama (Qwen2.5-Coder:7b)** | AI Engine | Optimized for coding tasks, providing powerful local LLM capabilities without API costs. |
-| **Telegram Bot API** | User Interface | Offers a cross-platform, ready-made mobile/desktop UI for instant interaction. |
-| **Git / GitHub Pages** | CI/CD & Hosting | Industry-standard version control paired with free, reliable static site hosting. |
-| **python-dotenv** | Config Management | Securely handles sensitive credentials like Telegram tokens. |
+- Accepts website change requests from Telegram (`/pilot ...`)
+- Uses a local LLM (via Ollama) to generate structured file operations
+- Executes file operations inside the `site/` folder
+- Auto-commits and pushes updates for deployment (for example, GitHub Pages)
+- Optionally sends Telegram deployment notifications
 
-## ❓ Why this stack?
+## MCP role in this project
 
-1.  **Privacy & Cost:** By using **Ollama**, all AI processing happens locally. No recurring API costs and your data stays private.
-2.  **Zero-Friction UI:** No custom frontend needed. **Telegram** provides instant notifications, command handling, and a familiar interface on any device.
-3.  **Autonomous Deployment:** Integrated **Git automation** handles the transition from "AI generation" to "Live production" in seconds.
+The file `mcp_server.py` is the core operation engine.
 
-## 💡 The Problem It Solves
+It works like an MCP-style controller by:
 
-Traditional web development—even for small changes—requires a laptop, a code editor, Git commands, and a deployment step. **SitePilot** bridges the gap:
+- receiving a user task
+- exposing available project files to the model
+- asking the model to return explicit commands only
+- parsing and executing those commands deterministically
 
--   **Mobile-First Development:** Update your website's header or add a new section while on the go using a simple Telegram message.
--   **Rapid Prototyping:** Describe your idea in plain English and let the LLM handle the HTML/CSS structure.
--   **Automated CI/CD:** The system handles the entire lifecycle: reading files, generating code, committing, and pushing to production.
+### Supported operation commands
 
-## 🚀 Getting Started
+The model is instructed to return only these operations:
 
-### Prerequisites
+- `READ: <filename>` - read a file from `site/`
+- `FILE: <filename>` + content block - create/update a file in `site/`
+- `DELETE: <filename>` - delete a file from `site/`
+
+This command-contract is the project's MCP-like interface between AI planning and actual file execution.
+
+## Architecture
+
+- `telegram_bot.py`
+  Telegram bot entrypoint and command handlers (`/start`, `/pilot`, `/status`).
+- `mcp_server.py`
+  MCP-style operation server: model prompt, command parsing, filesystem operations, Git deploy, and notifications.
+- `site/`
+  The actual website files that the AI edits.
+- `requirements.txt`
+  Python dependencies.
+
+## End-to-end workflow
+
+1. User sends `/pilot <change request>` in Telegram.
+2. Bot launches:
+   ```bash
+   python mcp_server.py "<change request>"
+   ```
+3. `mcp_server.py` gathers current `site/` structure.
+4. Ollama model returns operation commands (`READ`, `FILE`, `DELETE`).
+5. Server executes commands against `site/`.
+6. Server runs Git deploy steps (`add`, `commit`, `push`).
+7. Optional Telegram notification is sent.
+
+## Workflow Diagram
+
+![SitePilot workflow](image_f39afd95.png)
+
+## Prerequisites
+
 - Python 3.12+
-- [Ollama](https://ollama.com/) installed and running `qwen2.5-coder:7b`.
-- A Telegram Bot Token (from [@BotFather](https://t.me/botfather)).
+- [Ollama](https://ollama.com/) installed locally
+- Ollama model available locally: `qwen2.5-coder:7b`
+- Telegram bot token from [@BotFather](https://t.me/botfather)
+- Git remote configured (if you want automatic push/deploy)
 
-### Installation
-1.  Clone the repo:
-    ```bash
-    git clone https://github.com/yourusername/MCP.git
-    cd MCP
-    ```
-2.  Install dependencies:
-    ```bash
-    pip install python-telegram-bot requests ollama python-dotenv
-    ```
-    
-    
-3.  Configure environment:
-    Create a `.env` file:
-    ```env
-    TELEGRAM_TOKEN=your_bot_token_here
-    TELEGRAM_NOTIFY_IDS=your_chat_id_1,your_chat_id_2
-    ```
-## WorkFlow ⛓️‍💥
+## Installation
 
-![alt text](image_f39afd95.png)
+```bash
+git clone <your-repo-url>
+cd MCP
+pip install -r requirements.txt
+```
 
-### Running
-1.  Start the Telegram bot:
-    ```bash
-    python telegram_bot.py
-    ```
-2.  Open Telegram and send a command:
-    Example: `/pilot Add a dark mode toggle to the homepage`.
+## Environment variables
 
-## 📁 Project Structure
-- `telegram_bot.py`: The entry point for Telegram interaction.
-- `mcp_server.py`: The core engine that interacts with Ollama, parses file updates, and handles Git deployment.
-- `site/`: Contains the actual website source code (HTML/CSS/JS).
-- `.github/workflows/`: Contains the GitHub Actions for automated deployment to GitHub Pages.
+Create a `.env` file in the project root:
 
-▶️ **Watch the full demo here:** https://youtu.be/wWsGnYfuECk
+```env
+TELEGRAM_TOKEN=your_bot_token_here
+TELEGRAM_NOTIFY_IDS=your_chat_id
+```
+
+- `TELEGRAM_TOKEN`: required for bot + notifications
+- `TELEGRAM_NOTIFY_IDS`: optional comma-separated chat IDs to notify after deploy
+
+## Run the bot
+
+```bash
+python telegram_bot.py
+```
+
+Then in Telegram:
+
+- `/start` - usage help
+- `/status` - health check
+- `/pilot Add a dark mode toggle to the homepage`
+
+## Direct MCP operation run (without Telegram)
+
+You can run the MCP server directly:
+
+```bash
+python mcp_server.py "Update hero section text and CTA button"
+```
+
+
+
+## Demo
+
+Video: https://youtu.be/wWsGnYfuECk
